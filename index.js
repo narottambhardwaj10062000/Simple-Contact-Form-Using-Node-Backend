@@ -1,6 +1,7 @@
 import express from "express";
 import mongoose from "mongoose";
 import path from "path";
+import cookieParser from "cookie-parser";
 
 //CONNECTING MY DATABASE USING MONGOOSE
 mongoose.connect("mongodb://127.0.0.1:27017/backend")
@@ -23,11 +24,13 @@ const messageSchema = new mongoose.Schema({
 //CREATING A MODEL ACCORDING TO THE SCHEMA USING MONGOOSE
 const Message = mongoose.model("Message", messageSchema);
 
-
 //MIDDLEWARES
 app.use(express.static(path.join(path.resolve(), "public")));
 app.use(express.urlencoded({ extended: true }));
 app.set("view engine", "ejs");
+  //COOKIE PARSER
+app.use(cookieParser());
+
 
 //ADDING NEW ENTRY INTO THE DATABASE 
 app.get("/add", async (req, res) => {
@@ -35,8 +38,17 @@ app.get("/add", async (req, res) => {
     res.send("Data Added");
 });
 
+//HOME ROUTE
 app.get("/", (req, res) => {
-    res.render("index");
+    // res.render("index");
+    // res.render("login");
+    // console.log(req.cookies.token);
+    const { token } = req.cookies;
+    if(token){
+        res.render("logout");
+    }else{
+        res.render("login");
+    }
 });
 
 app.get("/users", (req, res) => {
@@ -47,6 +59,14 @@ app.get("/success", (req, res) => {
     res.render("success");
 });
 
+//LOGIN ROUTE
+app.post("/login", (req, res) => {
+    res.cookie("token", "I am In", {
+        httpOnly: true,
+        expires: new Date(Date.now() + 60*1000),
+    });
+    res.redirect("/");
+});
 
 app.post("/contact", async (req, res) => {
     // db.push({name: req.body.username, email: req.body.email});

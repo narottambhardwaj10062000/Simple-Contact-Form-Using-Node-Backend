@@ -21,3 +21,8 @@ input{
 button{
     padding: 1rem;
 }
+
+.login-container{
+    display: grid;
+    place-items: center;
+}
