@@ -68,6 +68,14 @@ app.post("/login", (req, res) => {
     res.redirect("/");
 });
 
+//LOGOUT ROUTE
+app.get("/logout", (req, res) => {
+    res.cookie("token", null, {
+        expires: new Date(Date.now()),
+    });
+    res.redirect("/");
+});
+
 app.post("/contact", async (req, res) => {
     // db.push({name: req.body.username, email: req.body.email});
     // console.log("info stored successfully in db");
