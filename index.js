@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import path from "path";
 import cookieParser from "cookie-parser";
+import jwt from "jsonwebtoken";
 
 //CONNECTING MY DATABASE USING MONGOOSE
 mongoose.connect("mongodb://127.0.0.1:27017/backend")
@@ -15,53 +16,51 @@ mongoose.connect("mongodb://127.0.0.1:27017/backend")
 
 const app = express();
 
+//MIDDLEWARES
+app.use(express.static(path.join(path.resolve(), "public")));
+app.use(express.urlencoded({ extended: true }));
+app.set("view engine", "ejs");
+app.use(cookieParser());
+
 //DEFINING MY SCHEMA
-const messageSchema = new mongoose.Schema({
+const userSchema = new mongoose.Schema({
     name: String,
     email: String,
 });
 
 //CREATING A MODEL ACCORDING TO THE SCHEMA USING MONGOOSE
-const Message = mongoose.model("Message", messageSchema);
+const User = mongoose.model("User", userSchema);
 
-//MIDDLEWARES
-app.use(express.static(path.join(path.resolve(), "public")));
-app.use(express.urlencoded({ extended: true }));
-app.set("view engine", "ejs");
-  //COOKIE PARSER
-app.use(cookieParser());
+//isAuthenticated Function
+const isAuthenticated = async (req, res, next) => {
+    const { token } = req.cookies;
 
+    if(token){
+        const decoded = jwt.verify(token, "asdfghjkl");
+        req.user = await User.findById(decoded._id)
 
-//ADDING NEW ENTRY INTO THE DATABASE 
-app.get("/add", async (req, res) => {
-    await Message.create({ name:"Manikant", email:"Manikant@gmail.com" });
-    res.send("Data Added");
-});
+        next();
+    }else{
+        res.render("login"); 
+    }
+}
 
 //HOME ROUTE
-app.get("/", (req, res) => {
-    // res.render("index");
-    // res.render("login");
-    // console.log(req.cookies.token);
-    const { token } = req.cookies;
-    if(token){
-        res.render("logout");
-    }else{
-        res.render("login");
-    }
-});
-
-app.get("/users", (req, res) => {
-    res.json({db});
-});
-
-app.get("/success", (req, res) => {
-    res.render("success");
+app.get("/", isAuthenticated, (req, res) => {
+    // console.log(req.user);
+    
+    res.render("logout", {name:req.user.name});
 });
 
 //LOGIN ROUTE
-app.post("/login", (req, res) => {
-    res.cookie("token", "I am In", {
+app.post("/login", async (req, res) => {
+    const {username, email } = req.body;
+    //storing the data in the database
+    const user = await User.create({ name:username, email });
+
+    const token = jwt.sign({ _id:user._id }, "asdfghjkl");
+
+    res.cookie("token", token, {
         httpOnly: true,
         expires: new Date(Date.now() + 60*1000),
     });
@@ -74,16 +73,6 @@ app.get("/logout", (req, res) => {
         expires: new Date(Date.now()),
     });
     res.redirect("/");
-});
-
-app.post("/contact", async (req, res) => {
-    // db.push({name: req.body.username, email: req.body.email});
-    // console.log("info stored successfully in db");
-    //ADDING MY DATA IN MY DATABASE
-    const data = { name:req.body.username, email:req.body.email };
-    await Message.create(data);
-
-    res.redirect("success");
 });
 
 //TO MAKE MY APPLICATION LISTEN ON A PORT
